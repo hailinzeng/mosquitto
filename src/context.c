@@ -34,6 +34,7 @@ struct mosquitto *context__init(struct mosquitto_db *db, mosq_sock_t sock)
 	context = mosquitto__calloc(1, sizeof(struct mosquitto));
 	if(!context) return NULL;
 	
+	context->pollfd_index = -1;
 	context->state = mosq_cs_new;
 	context->sock = sock;
 	context->last_msg_in = mosquitto_time();
@@ -102,12 +103,6 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 
 	if(!context) return;
 
-	mosquitto__free(context->username);
-	context->username = NULL;
-
-	mosquitto__free(context->password);
-	context->password = NULL;
-
 #ifdef WITH_BRIDGE
 	if(context->bridge){
 		for(i=0; i<db->bridge_count; i++){
@@ -124,16 +119,29 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 		mosquitto__free(context->bridge->local_password);
 		context->bridge->local_password = NULL;
 
-		mosquitto__free(context->bridge->remote_clientid);
+		if(context->bridge->remote_clientid != context->id){
+			mosquitto__free(context->bridge->remote_clientid);
+		}
 		context->bridge->remote_clientid = NULL;
 
-		mosquitto__free(context->bridge->remote_username);
+		if(context->bridge->remote_username != context->username){
+			mosquitto__free(context->bridge->remote_username);
+		}
 		context->bridge->remote_username = NULL;
 
-		mosquitto__free(context->bridge->remote_password);
+		if(context->bridge->remote_password != context->password){
+			mosquitto__free(context->bridge->remote_password);
+		}
 		context->bridge->remote_password = NULL;
 	}
 #endif
+
+	mosquitto__free(context->username);
+	context->username = NULL;
+
+	mosquitto__free(context->password);
+	context->password = NULL;
+
 	net__socket_close(db, context);
 	if((do_free || context->clean_session) && db){
 		sub__clean_session(db, context);

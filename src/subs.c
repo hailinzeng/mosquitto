@@ -183,7 +183,7 @@ static int sub__topic_tokenise(const char *subtopic, struct sub__token **topics)
 	assert(topics);
 
 	if(subtopic[0] != '$'){
-		new_topic = sub__topic_append(&tail, topics, " ");
+		new_topic = sub__topic_append(&tail, topics, "");
 		if(!new_topic) goto cleanup;
 	}
 
@@ -658,9 +658,12 @@ static int retain__process(struct mosquitto_db *db, struct mosquitto_msg_store *
 		return rc;
 	}
 
-	qos = retained->qos;
-
-	if(qos > sub_qos) qos = sub_qos;
+	if (db->config->upgrade_outgoing_qos){
+		qos = sub_qos;
+	} else {
+		qos = retained->qos;
+		if(qos > sub_qos) qos = sub_qos;
+	}
 	if(qos > 0){
 		mid = mosquitto__mid_generate(context);
 	}else{

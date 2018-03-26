@@ -35,6 +35,7 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 	uint8_t *payload = NULL, *tmp_payload;
 	uint32_t payloadlen = 0;
 	int len;
+	int slen;
 	char *sub_mount;
 
 	if(!context) return MOSQ_ERR_INVAL;
@@ -50,13 +51,13 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 
 	while(context->in_packet.pos < context->in_packet.remaining_length){
 		sub = NULL;
-		if(packet__read_string(&context->in_packet, &sub)){
+		if(packet__read_string(&context->in_packet, &sub, &slen)){
 			mosquitto__free(payload);
 			return 1;
 		}
 
 		if(sub){
-			if(STREMPTY(sub)){
+			if(!slen){
 				log__printf(NULL, MOSQ_LOG_INFO,
 						"Empty subscription string from %s, disconnecting.",
 						context->address);
@@ -72,7 +73,7 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 				mosquitto__free(payload);
 				return 1;
 			}
-			if(mosquitto_validate_utf8(sub, strlen(sub))){
+			if(mosquitto_validate_utf8(sub, slen)){
 				log__printf(NULL, MOSQ_LOG_INFO,
 						"Malformed UTF-8 in subscription string from %s, disconnecting.",
 						context->id);
@@ -94,7 +95,7 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 				return 1;
 			}
 			if(context->listener && context->listener->mount_point){
-				len = strlen(context->listener->mount_point) + strlen(sub) + 1;
+				len = strlen(context->listener->mount_point) + slen + 1;
 				sub_mount = mosquitto__malloc(len+1);
 				if(!sub_mount){
 					mosquitto__free(sub);
@@ -110,21 +111,8 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 			}
 			log__printf(NULL, MOSQ_LOG_DEBUG, "\t%s (QoS %d)", sub, qos);
 
-#if 0
-			/* FIXME
-			 * This section has been disabled temporarily. mosquitto_acl_check
-			 * calls mosquitto_topic_matches_sub, which can't cope with
-			 * checking subscriptions that have wildcards against ACLs that
-			 * have wildcards. Bug #1374291 is related.
-			 *
-			 * It's a very difficult problem when an ACL looks like foo/+/bar
-			 * and a subscription request to foo/# is made.
-			 *
-			 * This should be changed to using MOSQ_ACL_SUBSCRIPTION in the
-			 * future anyway.
-			 */
 			if(context->protocol == mosq_p_mqtt311){
-				rc = mosquitto_acl_check(db, context, sub, MOSQ_ACL_READ);
+				rc = mosquitto_acl_check(db, context, sub, MOSQ_ACL_SUBSCRIBE);
 				switch(rc){
 					case MOSQ_ERR_SUCCESS:
 						break;
@@ -136,7 +124,6 @@ int handle__subscribe(struct mosquitto_db *db, struct mosquitto *context)
 						return rc;
 				}
 			}
-#endif
 
 			if(qos != 0x80){
 				rc2 = sub__add(db, context, sub, qos, &db->subs);

@@ -12,7 +12,7 @@ clean :
 test-compile : 
 	$(MAKE) -C c
 
-test : test-compile 01 02 03 04 05 06 07 08 09 10
+test : test-compile 01 02 03 04 05 06 07 08 09 10 11
 
 01 :
 	./01-connect-success.py
@@ -41,6 +41,7 @@ endif
 	./02-unsubscribe-qos0.py
 	./02-unsubscribe-qos1.py
 	./02-unsubscribe-qos2.py
+	./02-unsubscribe-invalid-no-topic.py
 
 03 :
 	./03-publish-qos1.py
@@ -57,6 +58,7 @@ endif
 	./04-retain-qos0-repeated.py
 	./04-retain-qos1-qos0.py
 	./04-retain-qos0-clear.py
+	./04-retain-upgrade-outgoing-qos.py
 
 05 :
 	./05-clean-session-qos1.py 
@@ -69,6 +71,8 @@ endif
 	./06-bridge-b2br-disconnect-qos2.py
 	./06-bridge-fail-persist-resend-qos1.py
 	./06-bridge-fail-persist-resend-qos2.py
+	./06-bridge-b2br-remapping.py
+	./06-bridge-br2b-remapping.py
 
 07 :
 	./07-will-qos0.py
@@ -87,8 +91,10 @@ ifeq ($(WITH_TLS),yes)
 	./08-ssl-connect-identity.py
 	./08-ssl-connect-no-identity.py
 	./08-ssl-bridge.py
+ifeq ($(WITH_TLS_PSK),yes)
 	./08-tls-psk-pub.py
 	./08-tls-psk-bridge.py
+endif
 endif
 
 09 :
@@ -98,3 +104,5 @@ endif
 10 :
 	./10-listener-mount-point.py
 
+11 :
+	./11-persistent-subscription.py

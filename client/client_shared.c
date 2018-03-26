@@ -26,6 +26,7 @@ Contributors:
 #include <process.h>
 #include <winsock2.h>
 #define snprintf sprintf_s
+#define strncasecmp _strnicmp
 #endif
 
 #include <mosquitto.h>
@@ -70,7 +71,7 @@ static int check_format(struct mosq_config *cfg, const char *str)
 					// JSON output, assuming JSON payload
 				}else if(str[i+1] == 'U'){
 					// Unix time+nanoseconds
-				}else if(str[i+1] == 'x'){
+				}else if(str[i+1] == 'x' || str[i+1] == 'X'){
 					// payload in hex
 				}else{
 					fprintf(stderr, "Error: Invalid format specifier '%c'.\n", str[i+1]);
@@ -123,7 +124,7 @@ void init_config(struct mosq_config *cfg)
 	cfg->keepalive = 60;
 	cfg->clean_session = true;
 	cfg->eol = true;
-	cfg->protocol_version = MQTT_PROTOCOL_V31;
+	cfg->protocol_version = MQTT_PROTOCOL_V311;
 }
 
 void client_config_cleanup(struct mosq_config *cfg)

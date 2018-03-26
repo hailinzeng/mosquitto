@@ -42,6 +42,7 @@ int handle__publish(struct mosquitto_db *db, struct mosquitto *context)
 	int res = 0;
 	struct mosquitto_msg_store *stored = NULL;
 	int len;
+	int slen;
 	char *topic_mount;
 #ifdef WITH_BRIDGE
 	char *topic_temp;
@@ -61,8 +62,8 @@ int handle__publish(struct mosquitto_db *db, struct mosquitto *context)
 	}
 	retain = (header & 0x01);
 
-	if(packet__read_string(&context->in_packet, &topic)) return 1;
-	if(STREMPTY(topic)){
+	if(packet__read_string(&context->in_packet, &topic, &slen)) return 1;
+	if(!slen){
 		/* Invalid publish topic, disconnect client. */
 		mosquitto__free(topic);
 		return 1;
@@ -117,6 +118,11 @@ int handle__publish(struct mosquitto_db *db, struct mosquitto *context)
 #endif
 	if(mosquitto_pub_topic_check(topic) != MOSQ_ERR_SUCCESS){
 		/* Invalid publish topic, just swallow it. */
+		mosquitto__free(topic);
+		return 1;
+	}
+
+	if(mosquitto_validate_utf8(topic, strlen(topic)) != MOSQ_ERR_SUCCESS){
 		mosquitto__free(topic);
 		return 1;
 	}
